@@ -19,6 +19,10 @@ contract Options {
   mapping (uint => OptionT) options;
   uint256 public counter;
 
+  constructor() public {
+	  oraclize_setProof(proofType_Android | proofStorage_IPFS);
+  }
+
   // function createOption(address token, uint256 tokenQuantity, uint256 strike_18, uint256 premium, uint256 expTime_sec) public payable {
   function createOption(uint256 strikeFiat, uint256 premiumFiat, uint256 expTime_sec, uint optionQuantity) public payable returns (uint id) {
     require(expTime_sec > block.timestamp);
@@ -34,10 +38,18 @@ contract Options {
     return counter - 1;
   }
 
-  function excerciseOption(uint id) public {
+  function excerciseOption(uint id) public payable {
     // oracle here
-  }
-  // callback() { _payoutOption() }
+    // TODO: verify that user sends enough gas for the oracle
+    //msg.value() > oraclize_getPrice("URL")
+    if (oraclize_getPrice("URL") > address(this).balance) {
+      emit LogNewOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee!");
+    } else {
+      emit LogNewOraclizeQuery("Oraclize query was sent, standing by for the answer...");
+      oraclize_query(id, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0"); 
+    } 
+  } 
+  //callback() { _payoutOption() }
 
   function reclaimOption(uint id) public {
     uint256 optionQuantity = options[id].optionQuantity;
@@ -50,9 +62,19 @@ contract Options {
     require(msg.sender.send(optionQuantity));
   }
 
-  function _payoutOption(uint256 id) private {
+  function _payoutOption(uint256 id, price) private {
    OptionT memory option = options[id];
    // option
+  }
+
+  function str2price(string memory result) private returns(uint256) {
+	return 0;
+  }
+
+  function __callback(uint256 id, string memory result, bytes memory proof) public {
+	  require(msg.sender == oraclize_cbAddress());
+	  price = str2price(result);
+	  _payoutOption(id, price);
   }
 }
 
