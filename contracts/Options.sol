@@ -20,7 +20,7 @@ contract Options {
   uint256 public counter;
 
   // function createOption(address token, uint256 tokenQuantity, uint256 strike_18, uint256 premium, uint256 expTime_sec) public payable {
-  function createOption(uint256 strikeFiat, uint256 premiumFiat, uint256 expTime_sec, uint optionQuantity) public payable {
+  function createOption(uint256 strikeFiat, uint256 premiumFiat, uint256 expTime_sec, uint optionQuantity) public payable returns (uint id) {
     require(expTime_sec > block.timestamp);
     require(optionQuantity == msg.value);
 
@@ -30,24 +30,29 @@ contract Options {
     options[counter].expTime_sec = expTime_sec;
     options[counter].optionQuantity = optionQuantity;
     counter += 1;
-    OptionCreated(counter - 1);
+    emit OptionCreated(counter - 1);
     return counter - 1;
   }
 
-  function excerciseOption(uint256 id) public {
+  function excerciseOption(uint id) public {
+    // oracle here
+  }
+  // callback() { _payoutOption() }
+
+  function reclaimOption(uint id) public {
+    uint256 optionQuantity = options[id].optionQuantity;
+
+    require(msg.sender == options[id].assetOwner);
+    require(block.timestamp > options[id].expTime_sec);
+
+    // Re-entrant guarded
+    delete options[id];
+    require(msg.sender.send(optionQuantity));
+  }
+
+  function _payoutOption(uint256 id) private {
    OptionT memory option = options[id];
-   option
-  }
-
-  function set(uint x) public {
-    storedData = x;
-  }
-
-  function get() public view returns (uint) {
-    return storedData;
+   // option
   }
 }
 
-contract OptionAuction {
-  
-}
